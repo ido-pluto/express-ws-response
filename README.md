@@ -85,6 +85,6 @@ server.listen(3000, () => {
 ```
 
 
-### How to know the request is WS or HTTP?
+### How to know if the request is WS or HTTP?
 
 You can use the `req.isWebSocket` to check that, if it exists, it is a WebSocket request.
