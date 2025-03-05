@@ -75,7 +75,10 @@
     "@types/ws": "^8.5.14",
     "express": "^4.21.2",
     "semantic-release": "^24.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1"
   },
   "dependencies": {
     "bson": "^6.10.3",
