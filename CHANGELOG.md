@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/ido-pluto/express-ws-response/compare/v1.0.0...v1.0.1) (2025-03-05)
+
+
+### Bug Fixes
+
+* **README:** typo ([b83c638](https://github.com/ido-pluto/express-ws-response/commit/b83c6380d563eace9353f906f02dc68189b94567))
+
 # 1.0.0 (2025-03-05)
 
 
