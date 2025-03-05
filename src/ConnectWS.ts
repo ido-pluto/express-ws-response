@@ -24,6 +24,15 @@ export interface ResponseWS extends Response {
     ___isWSResponse: boolean;
 }
 
+
+declare global {
+    namespace Express {
+        export interface Request {
+            isWebSocket: boolean;
+        }
+    }
+}
+
 export type SomeHTTPServer = http.Server | https.Server | http2.Http2Server;
 
 const MAX_WAIT_FOR_DATA = 1000 * 10; // 10 seconds
@@ -86,7 +95,8 @@ export class ConnectWS {
                 ...headers
             },
             method,
-            body: requestBody
+            body: requestBody,
+            isWebSocket: true
         });
 
         this._handleResponse(mockExpressResponse, ws);
