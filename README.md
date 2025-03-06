@@ -18,7 +18,7 @@ npm install express-ws-response
 ## Usage
 ```javascript
 import express from 'express';
-import expressWsResponse from 'express-ws-response';
+import {expressWsResponse} from 'express-ws-response';
 
 const app = express();
 expressWsResponse(app); // must be called on the instance of express that open the port (e.g: "app.listen). Can not be called on express sub-router.
@@ -46,7 +46,7 @@ app.listen(3000, () => {
 ### In The client
 
 ```javascript
-import wsFetch from 'express-ws-response/browser';
+import {wsFetch} from 'express-ws-response/browser';
 
 const {data, headers, statusCode} = wsFetch("http://localhost:3000/hello");
 console.log(data); // Hello World!
@@ -72,7 +72,7 @@ If you use an external http/https/http2 server and only pass the request to expr
 ```javascript
 import * as http from "http";
 import express from 'express';
-import expressWsResponse from 'express-ws-response';
+import {expressWsResponse} from 'express-ws-response';
 
 const app = express();
 const server = http.createServer(app);
@@ -88,3 +88,18 @@ server.listen(3000, () => {
 ### How to know if the request is WS or HTTP?
 
 You can use the `req.isWebSocket` to check that, if it exists, it is a WebSocket request.
+
+## Vite Top Level Awaits
+BSON require top level await to work properly. 
+To enable top level await in Vite, you need to add the following configuration to your `vite.config.js` file.
+
+```javascript
+export default defineConfig({
+    optimizeDeps: {
+        esbuildOptions: {
+            target: 'esnext'
+        }
+    }
+})
+```
+

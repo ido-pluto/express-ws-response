@@ -8,10 +8,7 @@ import {z} from 'zod';
 import {generateErrorMessage} from 'zod-error';
 import * as https from 'node:https';
 import * as http2 from 'node:http2';
-import {extension} from 'mime-types';
 import {WSResponseAlreadyCloseError} from './errors/WSResponseAlreadyCloseError.js';
-
-const TEXTUAL_ENCODING = ['ascii', 'utf8', 'utf-8', 'utf16le', 'utf-16le', 'ucs2', 'ucs-2'];
 
 const requestSchema = z.object({
     method: z.enum(['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE']),
@@ -105,6 +102,8 @@ export class ConnectWS {
 
     private _handleResponse(res: ResponseWS, ws: WebSocket) {
         let responseEnded = false;
+        let headersSent = false;
+
         const write = (chunk: string | Buffer | any, encoding?: BufferEncoding, callback?: () => void) => {
             if (responseEnded) {
                 throw new WSResponseAlreadyCloseError();
@@ -115,22 +114,18 @@ export class ConnectWS {
             if (typeof encoding === 'string') {
                 chunk = Buffer.from(chunk, encoding);
                 type = 'buffer';
-
-                if (TEXTUAL_ENCODING.includes(encoding)) {
-                    type = 'string';
-                    chunk = chunk.toString('utf8');
-                }
             }
 
-            const mimeType = extension([res.getHeader('content-type')].flat().toString());
-            if (mimeType === 'json') {
-                type = 'json';
-                chunk = JSON.parse(chunk.toString('utf8'));
+            const sendData: any = {type, chunk};
+            if (!headersSent) {
+                sendData.headers = res.getHeaders();
+                sendData.statusCode = res.statusCode;
             }
 
-            const data = BSON.serialize({type, chunk});
+            const data = BSON.serialize(sendData);
             const funcCallback = typeof encoding === 'function' ? encoding : callback;
             ws.send(data, funcCallback);
+            headersSent = true;
         };
 
         const end = (data?: any, encoding?: BufferEncoding, callback?: () => void) => {
@@ -143,7 +138,7 @@ export class ConnectWS {
             }
 
             const funcCallback = typeof encoding === 'function' ? encoding : callback;
-            ws.send(BSON.serialize({type: 'finish', headers: res.getHeaders(), code: res.statusCode}), funcCallback);
+            ws.send(BSON.serialize({type: 'finish'}), funcCallback);
             ws.close();
             responseEnded = true;
         };
