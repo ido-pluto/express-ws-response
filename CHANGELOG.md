@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/ido-pluto/express-ws-response/compare/v3.0.0...v3.0.1) (2025-03-10)
+
+
+### Bug Fixes
+
+* **header:** send json header ([9ee23b1](https://github.com/ido-pluto/express-ws-response/commit/9ee23b1e739fc375b0813c79f9feac95fb28e1e8))
+
 # [3.0.0](https://github.com/ido-pluto/express-ws-response/compare/v2.0.0...v3.0.0) (2025-03-10)
 
 
