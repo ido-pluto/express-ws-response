@@ -88,7 +88,7 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             }
 
             if(typeof bodyResponse === 'string'){
-                bodyResponse = parseTextualContent(getContentType(finalHeaders), bodyResponse);
+                bodyResponse = parseTextualContent(getContentType(finalHeaders), bodyResponse).data;
             }
 
             bodyPromise.resolve(bodyResponse);
