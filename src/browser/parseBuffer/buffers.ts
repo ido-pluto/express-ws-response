@@ -5,6 +5,10 @@ function getHeader(name: string, headers: Headers, split = ";") {
     return headers.get(name)?.split(split).map(e => e.trim()).filter(Boolean);
 }
 
+export function getContentType(headers: Headers) {
+    return (getHeader('content-type', headers, ';') ?? [])?.[0] ?? "text/plain"
+}
+
 export async function parseBuffer(chunk: Uint8Array, headers: Headers) {
     const headerContentEncoding = getHeader('content-encoding', headers, ',') ?? [];
 
@@ -12,8 +16,7 @@ export async function parseBuffer(chunk: Uint8Array, headers: Headers) {
         chunk = await decompressData(chunk, encoding);
     }
 
-    const mimeType = (getHeader('content-type', headers, ';') ?? [])?.[0] ?? "text/plain";
-    return parseMimeTypeContent(mimeType, chunk);
+    return parseMimeTypeContent(getContentType(headers), chunk);
 }
 
 export function concatenateArrayBuffers(buffers: (ArrayBuffer | Uint8Array)[]): ArrayBufferLike {

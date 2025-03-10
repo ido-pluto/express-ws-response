@@ -1,6 +1,6 @@
 import {BSON} from "bson";
-import {concatenateArrayBuffers, parseBuffer} from "./parseBuffer/buffers.js";
-import {TEXT_MIME_TYPES} from "./parseBuffer/parseMimeTypeContent.js";
+import {concatenateArrayBuffers, getContentType, parseBuffer} from "./parseBuffer/buffers.js";
+import {parseTextualContent, TEXT_MIME_TYPES} from "./parseBuffer/parseMimeTypeContent.js";
 import {ACCEPT_ENCODING} from "./parseBuffer/decompress.js";
 
 type WSFetchOptions = {
@@ -85,6 +85,10 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             if (binaryStream.length) {
                 const {data} = await parseBuffer(bodyResponse, finalHeaders);
                 bodyResponse = data;
+            }
+
+            if(typeof bodyResponse === 'string'){
+                bodyResponse = parseTextualContent(getContentType(finalHeaders), bodyResponse);
             }
 
             bodyPromise.resolve(bodyResponse);

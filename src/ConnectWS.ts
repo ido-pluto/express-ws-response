@@ -9,6 +9,8 @@ import {generateErrorMessage} from 'zod-error';
 import * as https from 'node:https';
 import * as http2 from 'node:http2';
 
+const TEXTUAL_ENCODING = ['ascii', 'utf8', 'utf-8', 'utf16le', 'utf-16le', 'ucs2', 'ucs-2'];
+
 const requestSchema = z.object({
     method: z.enum(['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE']),
     headers: z.record(z.string()).optional(),
@@ -111,6 +113,7 @@ export class ConnectWS {
     }
 
     private _handleResponse(req:  MockRequest<Request>, res: MockResponse<Mutable<ResponseWS>>, ws: WebSocket) {
+        let headersSent = false;
 
         ws.addEventListener("close", () => {
             req.emit("abort")
@@ -146,10 +149,15 @@ export class ConnectWS {
             if (typeof encoding === 'string') {
                 chunk = Buffer.from(chunk, encoding);
                 type = 'buffer';
+
+                if (TEXTUAL_ENCODING.includes(encoding)) {
+                    type = 'string';
+                    chunk = chunk.toString('utf8');
+                }
             }
 
             const sendData: any = {type, chunk};
-            if (!res.headersSent) {
+            if (!headersSent) {
                 sendData.headers = res.getHeaders();
                 sendData.status = res.statusCode;
             }
@@ -158,6 +166,7 @@ export class ConnectWS {
             const funcCallback = typeof encoding === 'function' ? encoding : callback;
             ws.send(data, funcCallback);
             res.headersSent = true;
+            headersSent = true;
 
             return true;
         };
