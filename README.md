@@ -9,6 +9,7 @@
 - Support both HTTP and WebSocket requests.
 - Encoding data effectively with BSON.
 - Support Uint8Array, ArrayBuffer, and Buffer data types.
+- Support AbortController for canceling the request.
 
 ## Installation
 ```bash
@@ -31,10 +32,19 @@ app.post('/body', (req, res) => {
   res.json({ message: 'Hello World!', ...req.body });
 });
 
-app.post('/stream', (req, res) => {
-    res.write({ counter: 1 });
-    res.write({ counter: 2 });
-    res.write({ counter: 3 });
+app.post('/stream', async (req, res) => {
+    let closed = false;
+    res.on("close", () => {
+        closed = true;
+        console.log("Connection closed");
+    });
+    
+    for(let i = 0; i < 4 && !closed; i++){
+        res.write({ counter: i });
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    if(closed) return;
     res.end({ok: true});
 });
 
@@ -48,22 +58,29 @@ app.listen(3000, () => {
 ```javascript
 import {wsFetch} from 'express-ws-response/browser';
 
-const {data, headers, statusCode} = wsFetch("http://localhost:3000/hello");
-console.log(data); // Hello World!
+const {data, headers, status} = await wsFetch("http://localhost:3000/hello");
+console.log(await data); // Hello World!
 
-const {data, headers, statusCode} = wsFetch("http://localhost:3000/body", {
+const {data} = await wsFetch("http://localhost:3000/body", {
     method: 'POST',
     body: { name: 'John Doe' }
 });
-console.log(data); // { message: 'Hello World!', name: 'John Doe' }
+console.log(await data); // { message: 'Hello World!', name: 'John Doe' }
 
-const {data, headers, statusCode} = wsFetch("http://localhost:3000/stream", {
+const abortController = new AbortController();
+const {data} = await wsFetch("http://localhost:3000/stream", {
     method: 'POST',
+    signal: abortController.signal,
     onStreaming: data => {
         console.log(data); // { counter: 1 }, { counter: 2 }, { counter: 3 }
     }
 });
-console.log(data); // {ok: true}
+
+setTimeout(() => {
+    abortController.abort();
+}, 1000);
+
+console.log(await data); // throw AbortError
 ```
 
 ### Using external HTTP server

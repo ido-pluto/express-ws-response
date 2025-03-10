@@ -1,20 +1,23 @@
-import {Express, Response} from 'express';
+import {Express, Response, Request} from 'express';
 import {WebSocket, WebSocketServer} from 'ws';
 import * as http from 'node:http';
 import * as Stream from 'node:stream';
 import {BSON} from 'bson';
-import {createRequest, createResponse} from 'node-mocks-http';
+import {createRequest, createResponse, MockRequest, MockResponse} from 'node-mocks-http';
 import {z} from 'zod';
 import {generateErrorMessage} from 'zod-error';
 import * as https from 'node:https';
 import * as http2 from 'node:http2';
-import {WSResponseAlreadyCloseError} from './errors/WSResponseAlreadyCloseError.js';
 
 const requestSchema = z.object({
     method: z.enum(['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE']),
     headers: z.record(z.string()).optional(),
     body: z.any().optional()
 });
+
+type Mutable<T> = {
+    -readonly [K in keyof T]: T[K];
+};
 
 export interface ResponseWS extends Response {
     sendError: (errorMessage: string, errorCode?: number) => void;
@@ -68,7 +71,8 @@ export class ConnectWS {
                         clearTimeout(maxWaitForData);
                         const body = BSON.deserialize(data as any);
                         this._onWSRequest(body, ws, request);
-                    } catch {
+                    } catch(error) {
+                        ws.close(1011, "Internal Server Error");
                         socket.end();
                     }
                 });
@@ -77,15 +81,16 @@ export class ConnectWS {
     }
 
     private _onWSRequest(body: any, ws: WebSocket, originalRequest: http.IncomingMessage) {
-        const mockExpressResponse: ResponseWS = createResponse();
+
         const result = requestSchema.safeParse(body);
         if (!result.success) {
-            mockExpressResponse.sendError(generateErrorMessage(result.error.issues));
+            const res:  MockResponse<ResponseWS> = createResponse({writableStream: function (){}});
+            res.sendError(generateErrorMessage(result.error.issues));
             return;
         }
 
         const {method, body: requestBody, headers} = result.data;
-        const request = createRequest({
+        const request: MockRequest<Request> = createRequest({
             ...originalRequest,
             headers: {
                 ...originalRequest.headers,
@@ -96,17 +101,44 @@ export class ConnectWS {
             isWebSocket: true
         });
 
-        this._handleResponse(mockExpressResponse, ws);
+        const mockExpressResponse: MockResponse<ResponseWS> = createResponse({
+            writableStream: function (){},
+            req: request
+        });
+
+        this._handleResponse(request, mockExpressResponse, ws);
         this._app(request, mockExpressResponse);
     }
 
-    private _handleResponse(res: ResponseWS, ws: WebSocket) {
-        let responseEnded = false;
-        let headersSent = false;
+    private _handleResponse(req:  MockRequest<Request>, res: MockResponse<Mutable<ResponseWS>>, ws: WebSocket) {
 
-        const write = (chunk: string | Buffer | any, encoding?: BufferEncoding, callback?: () => void) => {
-            if (responseEnded) {
-                throw new WSResponseAlreadyCloseError();
+        ws.addEventListener("close", () => {
+            req.emit("abort")
+            req.emit("close");
+            Object.defineProperty(req, 'closed', {
+                configurable: true,
+                enumerable: true,
+                get: () => true
+            });
+
+            if(!res.writableEnded){
+                res.writableEnded = true;
+                res.emit("close");
+            }
+            Object.defineProperty(res, 'closed', {
+                configurable: true,
+                enumerable: true,
+                get: () => true
+            });
+        });
+
+        ws.addEventListener("error", (event) => {
+            res.emit("error", event.error);
+        });
+
+        const write = (chunk: string | Buffer | any, encoding?: BufferEncoding | ((error: Error | null | undefined) => void), callback?: (error: Error | null | undefined) => void): boolean => {
+            if (res.writableEnded) {
+                return false;
             }
 
             let type = ConnectWS.type(chunk);
@@ -117,30 +149,42 @@ export class ConnectWS {
             }
 
             const sendData: any = {type, chunk};
-            if (!headersSent) {
+            if (!res.headersSent) {
                 sendData.headers = res.getHeaders();
-                sendData.statusCode = res.statusCode;
+                sendData.status = res.statusCode;
             }
 
             const data = BSON.serialize(sendData);
             const funcCallback = typeof encoding === 'function' ? encoding : callback;
             ws.send(data, funcCallback);
-            headersSent = true;
+            res.headersSent = true;
+
+            return true;
         };
 
-        const end = (data?: any, encoding?: BufferEncoding, callback?: () => void) => {
-            if (responseEnded) {
-                throw new WSResponseAlreadyCloseError();
-            }
-
+        const end = (data?: any, encodingOrCallback?: BufferEncoding | (() => void), callback?: () => void) => {
             if (data) {
-                write(data, encoding, callback);
+                write(data, encodingOrCallback as BufferEncoding, callback);
             }
 
-            const funcCallback = typeof encoding === 'function' ? encoding : callback;
+            if (res.writableEnded) {
+                return res;
+            }
+
+            const funcCallback = typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;
             ws.send(BSON.serialize({type: 'finish'}), funcCallback);
             ws.close();
-            responseEnded = true;
+
+
+            res.finished = true;
+            res.writableEnded = true;
+            res.headersSent = true;
+
+            res.emit('end');
+            res.writableEnded = true;
+            res.emit('finish');
+
+            return res;
         };
 
         const sendError = (errorMessage = 'Internal Server Error', errorCode = 500) => {
@@ -148,11 +192,20 @@ export class ConnectWS {
             end(errorMessage);
         };
 
+        const destroy = (error?: Error) => {
+            res.emit('error', error);
+            ws.close();
+            res.destroyed = true;
+
+            return res;
+        }
+
         res.___isWSResponse = true;
         res.sendError = sendError;
-        res.write = write as any;
-        res.end = end as any;
-        res.send = end as any;
+        res.write = write;
+        res.end = end;
+        res.send = end;
+        res.destroy = destroy;
     }
 
     static type(body: any) {

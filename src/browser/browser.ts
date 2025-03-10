@@ -8,18 +8,21 @@ type WSFetchOptions = {
     body?: any
     headers?: HeadersInit
     onStreaming?: (data: string | Uint8Array | any) => void
+    signal?: AbortSignal
 }
 
 type WSFetchResponse = {
-    data: any,
-    headers: Record<string, string | string[]>
-    statusCode: number
+    data: Promise<any>
+    headers: Headers
+    status: number
 }
 
 const ACCEPTED_MIME_TYPES = [...TEXT_MIME_TYPES, "*/*"];
 
-export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, headers}: WSFetchOptions = {}) {
+export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, headers, signal}: WSFetchOptions = {}) {
     const {reject, resolve, promise} = Promise.withResolvers<WSFetchResponse>();
+    const bodyPromise = Promise.withResolvers<any>();
+
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
@@ -34,19 +37,35 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
         });
         ws.send(deserialize);
     }
-    ws.onerror = reject;
-    ws.onclose = reject;
+
+    const rejectAll = (error: Error) => {
+        reject(error);
+        bodyPromise.reject(error);
+    }
+
+    ws.onerror = () => rejectAll(new DOMException("WebSocket Error", "NetworkError"));
+    ws.onclose = ({reason, code}) => rejectAll(new DOMException(`WebSocket closed with code ${code} and reason: ${reason || 'unknown'}`, "ServerError"));
+
+    signal?.addEventListener("abort", () => {
+        rejectAll(new DOMException("The operation was aborted", "AbortError"));
+        ws.close();
+    });
 
     let textStream = '';
     let jsonResponse: any = null;
-
-    let finalHeaders: Headers;
-    let finalStatusCode: number;
+    let finalHeaders = new Headers();
     const binaryStream: Uint8Array[] = [];
+
     ws.onmessage = async data => {
-        let {type, chunk, headers, code} = BSON.deserialize(data.data);
-        finalHeaders ??= new Headers(headers);
-        finalStatusCode ??= code;
+        let {type, chunk, headers, status} = BSON.deserialize(data.data);
+        if(headers || status){
+            finalHeaders = new Headers(headers);
+            resolve({
+                data: bodyPromise.promise,
+                headers: finalHeaders,
+                status: status
+            });
+        }
 
         if (type === 'string') {
             textStream += chunk;
@@ -68,11 +87,7 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
                 bodyResponse = data;
             }
 
-            resolve({
-                data: bodyResponse,
-                headers,
-                statusCode: code
-            });
+            bodyPromise.resolve(bodyResponse);
         } else {
             onStreaming?.(chunk);
         }
