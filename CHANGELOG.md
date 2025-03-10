@@ -1,3 +1,10 @@
+## [3.0.2](https://github.com/ido-pluto/express-ws-response/compare/v3.0.1...v3.0.2) (2025-03-10)
+
+
+### Bug Fixes
+
+* **json:** parse ([7229462](https://github.com/ido-pluto/express-ws-response/commit/722946258fe3db045a3030216362a1fa8e8a7b2c))
+
 ## [3.0.1](https://github.com/ido-pluto/express-ws-response/compare/v3.0.0...v3.0.1) (2025-03-10)
 
 
