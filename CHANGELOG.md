@@ -1,3 +1,15 @@
+# [3.0.0](https://github.com/ido-pluto/express-ws-response/compare/v2.0.0...v3.0.0) (2025-03-10)
+
+
+### Features
+
+* support abort controller ([e7f4dab](https://github.com/ido-pluto/express-ws-response/commit/e7f4dabb9ae00cbde91651e3c1fcd854329035a6))
+
+
+### BREAKING CHANGES
+
+* data is a promise
+
 # [2.0.0](https://github.com/ido-pluto/express-ws-response/compare/v1.0.1...v2.0.0) (2025-03-06)
 
 
