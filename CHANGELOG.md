@@ -1,3 +1,10 @@
+## [3.0.3](https://github.com/ido-pluto/express-ws-response/compare/v3.0.2...v3.0.3) (2025-03-17)
+
+
+### Bug Fixes
+
+* **json:** send with streaming ([23822d7](https://github.com/ido-pluto/express-ws-response/commit/23822d7f8d001966cad5b353b2ddd7f0696c8e28))
+
 ## [3.0.2](https://github.com/ido-pluto/express-ws-response/compare/v3.0.1...v3.0.2) (2025-03-10)
 
 
