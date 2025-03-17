@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/ido-pluto/express-ws-response/compare/v3.0.5...v3.1.0) (2025-03-17)
+
+
+### Features
+
+* client streaming ([1de7a9e](https://github.com/ido-pluto/express-ws-response/commit/1de7a9e48a78606d956d5e991f4b00c002cfa80f))
+
 ## [3.0.5](https://github.com/ido-pluto/express-ws-response/compare/v3.0.4...v3.0.5) (2025-03-17)
 
 
