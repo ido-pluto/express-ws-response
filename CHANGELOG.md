@@ -1,3 +1,10 @@
+## [3.0.5](https://github.com/ido-pluto/express-ws-response/compare/v3.0.4...v3.0.5) (2025-03-17)
+
+
+### Bug Fixes
+
+* **json:** retrieve ([663ee72](https://github.com/ido-pluto/express-ws-response/commit/663ee725b775f43d03a74194a77e6f02ff583b75))
+
 ## [3.0.4](https://github.com/ido-pluto/express-ws-response/compare/v3.0.3...v3.0.4) (2025-03-17)
 
 
