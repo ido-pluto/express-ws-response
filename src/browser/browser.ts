@@ -79,8 +79,9 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             ws.onclose = null;
             ws.close();
 
+            debugger
             let bodyResponse = binaryStream.length ? concatenateArrayBuffers(binaryStream) :
-                textStream.length ? textStream : jsonResponse;
+                jsonResponse ? jsonResponse : textStream || null;
 
             if (binaryStream.length) {
                 const {data} = await parseBuffer(bodyResponse, finalHeaders);
