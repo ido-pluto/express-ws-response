@@ -71,7 +71,7 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             textStream += chunk;
         } else if (type === 'buffer') {
             binaryStream.push(chunk.data || chunk.buffer || chunk);
-        } else if (type === 'json') {
+        } else if (type === 'json5') {
             jsonResponse = chunk;
         }
 
