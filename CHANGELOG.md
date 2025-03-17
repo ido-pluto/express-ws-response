@@ -1,3 +1,10 @@
+## [3.0.4](https://github.com/ido-pluto/express-ws-response/compare/v3.0.3...v3.0.4) (2025-03-17)
+
+
+### Bug Fixes
+
+* remove debugger ([ff34159](https://github.com/ido-pluto/express-ws-response/commit/ff341591bffd61cb96bdaf63b821cfe822e7a6cc))
+
 ## [3.0.3](https://github.com/ido-pluto/express-ws-response/compare/v3.0.2...v3.0.3) (2025-03-17)
 
 
