@@ -13,6 +13,7 @@ type WSFetchOptions = {
 
 type WSFetchResponse = {
     data: Promise<any>
+    write: (data: any) => void
     headers: Headers
     status: number
 }
@@ -36,6 +37,11 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             method
         });
         ws.send(deserialize);
+    }
+
+    const writeDataToStream = (data: any) => {
+        const serialized = BSON.serialize({data});
+        ws.send(serialized);
     }
 
     const rejectAll = (error: Error) => {
@@ -63,7 +69,8 @@ export function wsFetch(url: string | URL, {method = "GET", body, onStreaming, h
             resolve({
                 data: bodyPromise.promise,
                 headers: finalHeaders,
-                status: status
+                status: status,
+                write: writeDataToStream
             });
         }
 

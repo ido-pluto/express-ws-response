@@ -10,6 +10,7 @@
 - Encoding data effectively with BSON.
 - Support Uint8Array, ArrayBuffer, and Buffer data types.
 - Support AbortController for canceling the request.
+- Live-streaming data from a client and to a client
 
 ## Installation
 ```bash
@@ -37,6 +38,10 @@ app.post('/stream', async (req, res) => {
     res.on("close", () => {
         closed = true;
         console.log("Connection closed");
+    });
+
+    req.on("data", data => {
+        console.log(data);
     });
     
     for(let i = 0; i < 4 && !closed; i++){
@@ -68,13 +73,15 @@ const {data} = await wsFetch("http://localhost:3000/body", {
 console.log(await data); // { message: 'Hello World!', name: 'John Doe' }
 
 const abortController = new AbortController();
-const {data} = await wsFetch("http://localhost:3000/stream", {
+const {data, write} = await wsFetch("http://localhost:3000/stream", {
     method: 'POST',
     signal: abortController.signal,
     onStreaming: data => {
         console.log(data); // { counter: 1 }, { counter: 2 }, { counter: 3 }
     }
 });
+
+write('Hi from client'); // also can be an object
 
 setTimeout(() => {
     abortController.abort();

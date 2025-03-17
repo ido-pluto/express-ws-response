@@ -1,4 +1,4 @@
-import {Express, Response, Request} from 'express';
+import {Express, Request, Response} from 'express';
 import {WebSocket, WebSocketServer} from 'ws';
 import * as http from 'node:http';
 import * as Stream from 'node:stream';
@@ -73,7 +73,7 @@ export class ConnectWS {
                         clearTimeout(maxWaitForData);
                         const body = BSON.deserialize(data as any);
                         this._onWSRequest(body, ws, request);
-                    } catch(error) {
+                    } catch (error) {
                         ws.close(1011, "Internal Server Error");
                         socket.end();
                     }
@@ -86,7 +86,10 @@ export class ConnectWS {
 
         const result = requestSchema.safeParse(body);
         if (!result.success) {
-            const res:  MockResponse<ResponseWS> = createResponse({writableStream: function (){}});
+            const res: MockResponse<ResponseWS> = createResponse({
+                writableStream: function () {
+                }
+            });
             res.sendError(generateErrorMessage(result.error.issues));
             return;
         }
@@ -104,7 +107,8 @@ export class ConnectWS {
         });
 
         const mockExpressResponse: MockResponse<ResponseWS> = createResponse({
-            writableStream: function (){},
+            writableStream: function () {
+            },
             req: request
         });
 
@@ -112,11 +116,13 @@ export class ConnectWS {
         this._app(request, mockExpressResponse);
     }
 
-    private _handleResponse(req:  MockRequest<Request>, res: MockResponse<Mutable<ResponseWS>>, ws: WebSocket) {
+    private _handleResponse(req: MockRequest<Request>, res: MockResponse<Mutable<ResponseWS>>, ws: WebSocket) {
         let headersSent = false;
 
         ws.addEventListener("close", () => {
-            req.emit("abort")
+            if (res.closed) return;
+
+            req.emit("aborted");
             req.emit("close");
             Object.defineProperty(req, 'closed', {
                 configurable: true,
@@ -124,7 +130,7 @@ export class ConnectWS {
                 get: () => true
             });
 
-            if(!res.writableEnded){
+            if (!res.writableEnded) {
                 res.writableEnded = true;
                 res.emit("close");
             }
@@ -135,8 +141,13 @@ export class ConnectWS {
             });
         });
 
+        ws.on("message", (data: any) => {
+            const {data: body} = BSON.deserialize(data as any);
+            req.emit("data", body);
+        });
+
         ws.addEventListener("error", (event) => {
-            res.emit("error", event.error);
+            res.on("error", event.error);
         });
 
         const write = (chunk: string | Buffer | any, encoding?: BufferEncoding | ((error: Error | null | undefined) => void), callback?: (error: Error | null | undefined) => void): boolean => {
@@ -145,7 +156,6 @@ export class ConnectWS {
             }
 
             let type = ConnectWS.type(chunk);
-
             if (typeof encoding === 'string') {
                 chunk = Buffer.from(chunk, encoding);
                 type = 'buffer';
